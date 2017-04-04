@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
     <CheckBoxPreference
         android:defaultValue="false"
         android:key="user_present_today"
@@ -7,4 +8,28 @@
         android:summaryOn="Used Today"
         android:title="User Present Today" />
 
+    <EditTextPreference
+        android:key="time_used"
+        android:title="Phone Last Used At"
+        android:summary="phone last used time"
+        android:defaultValue=""
+        />
+
+    <EditTextPreference
+        android:defaultValue=""
+        android:key="@string/next_type"
+        android:summary="next alarm type"
+        android:title="Next alarm will be: "/>
+
+    <EditTextPreference
+        android:defaultValue=""
+        android:key="@string/next_time"
+        android:summary="Next alarm time"
+        android:title="Next alarm at: "/>
+
+    <EditTextPreference
+        android:defaultValue=""
+        android:key="@string/contact_num_key"
+        android:summary="@string/contact_phone"
+        android:title="Contact Phone Number: "/>
 </PreferenceScreen>

@@ -8,23 +8,24 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
+import android.telephony.SmsManager;
 import android.util.Log;
 import android.widget.Toast;
-import android.telephony.SmsManager;
 
 import java.util.Calendar;
 
+import static com.example.android.checkin.R.string.reset;
+
 public class CheckInService extends Service {
 
-    //    private final static String CONTACT_PHONE_NUMBER = "6178998974";
-//    private final static String SELF_PHONE_NUMBER = "5403151095";
-    private final static String CONTACT_PHONE_NUMBER = "6178998974";
-    private final static String SELF_PHONE_NUMBER = "5556";
+    //number to which to send noon update
+//    private final static String CONTACT_PHONE_NUMBER = "6178998974";
+    private String mContactNum;
 
-    private final static int CHECKIN_SMS_PERMISSION_REQUEST_CODE = 1;
 
     private final static String ALARM_WAKE_UP_START = "AlarmWakeUpStart";
     private final static String ALARM_WAKE_UP_END = "AlarmWakeUpEnd";
+
 
 
 
@@ -32,10 +33,13 @@ public class CheckInService extends Service {
     private int START_TIME = 6;
     private int END_TIME = 12;
 
+
+    //field to store last time used
+    private Calendar mTimeReport;
+
     private final static String LOG_TAG = CheckInService.class.getSimpleName();
 
-    ActionReceiver mActionReceiver;
-
+    //empty constructor
     public CheckInService() {
     }
 
@@ -48,74 +52,131 @@ public class CheckInService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
+        //get preferences - will be used later
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+
+
         if (intent.hasExtra(Intent.EXTRA_TEXT)) {
-            Log.v(LOG_TAG, "Start command received with " + intent.getStringExtra(Intent.EXTRA_TEXT));
 
-            //if this is the first run...
-            if (intent.getStringExtra(Intent.EXTRA_TEXT).equals("first_run")) {
+            //if this is the first run after installation
+            if (intent.getStringExtra(Intent.EXTRA_TEXT).equals(getString(R.string.first_run))) {
+
+                Toast.makeText(this, "Make sure to set contact phone number in settings!", Toast.LENGTH_LONG).show();
+
+                //TESTING: send a message as soon as installed to check time
+                mTimeReport = Calendar.getInstance();
+                mTimeReport.setTimeInMillis(System.currentTimeMillis());
+                String timeUsed = mTimeReport.get(Calendar.HOUR_OF_DAY) + ":" + mTimeReport.get(Calendar.MINUTE);
+
+                int hour = mTimeReport.get(Calendar.HOUR_OF_DAY);
+
+                Log.v(LOG_TAG, "first run and hour is " + hour);
+
+                //change "user-present" to true because installing it implies using device
                 SharedPreferences.Editor editor = sharedPreferences.edit();
-                editor.putBoolean("user_present_today", true);
-                editor.apply();
+                editor.putBoolean(getString(R.string.user_present_today), true);
 
-                //testing purposes - fix for use
+                //put current time in "last-time-used" field
+                editor.putString(getString(R.string.last_used_time), timeUsed);
 
 
-                setAlarm(START_TIME, true);
-                //Log.v(LOG_TAG, "Setting start alarm");
-                //               END_TIME = setAlarm(30, false);
-                //           Log.v(LOG_TAG, "Setting stop alarm for 30 seconds from now");
-                //Log.v(LOG_TAG, "first run");
+
+                //If we are after end time or before start time
+                if (hour >= END_TIME || hour < START_TIME){
+
+                    String resetTime = START_TIME + ":00";
+                    if (hour >= END_TIME){
+                        resetTime = resetTime + " tomorrow";
+                    }
+                    Log.v(LOG_TAG, "Next alarm should be a reset at " + resetTime);
+
+                    //update the Preferences with the type and time of the next alarm
+                    editor.putString(getString(R.string.next_type), getString(reset));
+                    editor.putString(getString(R.string.next_time), resetTime);
+                    editor.apply();
+
+                    //set the alarm for tomorrow's start time
+                    setAlarm(START_TIME, true);
+                }
+                //otherwise we're between times and should start with an end alarm
+                else if (hour >=  START_TIME){
+
+                    String updateTime = END_TIME + ":00";
+                    Log.v(LOG_TAG, "Next alarm should be an update at " + updateTime);
+
+                    //update Preferences with type andtime of next alarm
+                    editor.putString(getString(R.string.next_type), getString(R.string.update));
+                    editor.putString(getString(R.string.next_time), updateTime);
+                    editor.apply();
+
+                    //set the alarm for the next end time
+                    setAlarm(END_TIME, false);
+
+                }
+
 
             }
 
             //if you've gotten the "first use" message
-            else if (intent.getStringExtra(Intent.EXTRA_TEXT).equals("first_use_of_day")) {
+            else if (intent.getStringExtra(Intent.EXTRA_TEXT).equals(getString(R.string.first_use_today))) {
                 SharedPreferences.Editor editor = sharedPreferences.edit();
-//                Log.v(LOG_TAG, "before first use " + sharedPreferences.getBoolean("user_present_today", false));
-                editor.putBoolean("user_present_today", true);
+
+                //update the present_today flag to true
+                editor.putBoolean(getString(R.string.user_present_today), true);
+
+                //calculate and update the "time-last-used" to the current time
+                mTimeReport = Calendar.getInstance();
+                mTimeReport.setTimeInMillis(System.currentTimeMillis());
+                String timeUsed = mTimeReport.get(Calendar.HOUR_OF_DAY) + ":" + mTimeReport.get(Calendar.MINUTE);
+                editor.putString(getString(R.string.last_used_time), timeUsed);
                 editor.apply();
 
-//                Log.v(LOG_TAG, "first use today, so now " + sharedPreferences.getBoolean("user_present_today", false));
 
             }
 
-            //if you've gotten the "12:00 and no activity" message
-/*        else if (intent.hasExtra("no_use_by_end_time")){
-            if (intent.getBooleanExtra("no_use_by_end_time", true)){
-                sendStatusMessage(false);
-                Log.v(LOG_TAG, "no user by end time");
-            }
 
-        }
-*/
             else if (intent.getStringExtra(Intent.EXTRA_TEXT).equals(ALARM_WAKE_UP_START)) {
-                //get current date and time
-                Calendar time = Calendar.getInstance();
- //               Log.v(LOG_TAG, "woke up to alarm at " + time.getTime());
 
                 SharedPreferences.Editor editor = sharedPreferences.edit();
-   //             Log.v(LOG_TAG, "user present before change: " + sharedPreferences.getBoolean("user_present_today", false));
-                editor.putBoolean("user_present_today", false);
+
+                //reset user-present-flag to false and update time-used to blank
+                editor.putBoolean(getString(R.string.user_present_today), false);
+                editor.putString(getString(R.string.last_used_time), "");
+                String updateTime = END_TIME + ":00";
+
+                //update with next type and time of alarm
+                editor.putString(getString(R.string.next_type), getString(R.string.update));
+                editor.putString(getString(R.string.next_time), updateTime);
                 editor.apply();
-   //             Log.v(LOG_TAG, "user present after change: " + sharedPreferences.getBoolean("user_present_today", false));
-                //if it's morning, set the next morning wakeup
-//                setAlarm(START_TIME);
-                //TESTING: currently, only set the noon wakeup
+
+                Log.v(LOG_TAG, "Next alarm should be an update at " + updateTime);
+
+
+                //set the alarm
                 setAlarm(END_TIME, false);
-            } else if (intent.getStringExtra(Intent.EXTRA_TEXT).equals(ALARM_WAKE_UP_END)) {
-                boolean used_today = sharedPreferences.getBoolean("user_present_today", false);
-     //           Log.v(LOG_TAG, "used today ? " + used_today);
+            }
+
+            else if (intent.getStringExtra(Intent.EXTRA_TEXT).equals(ALARM_WAKE_UP_END)) {
+                boolean used_today = sharedPreferences.getBoolean(getString(R.string.user_present_today), false);
                 if (!used_today) {
                     //user hasn't used phone today, send message
                     sendStatusMessage(false);
                 } else {
                     sendStatusMessage(true);
                 }
-                //if it's noon, set the next noon wakeup
-                //setAlarm(END_TIME);
 
-                //TODO: Reset for next day. Not adding for right now
+                //update the preferences with type and time of next alarm
+                String resetTime = START_TIME + ":00";
+                SharedPreferences.Editor editor = sharedPreferences.edit();
+                editor.putString(getString(R.string.next_type), getString(reset));
+                editor.putString(getString(R.string.next_time), resetTime);
+                editor.apply();
+
+                Log.v(LOG_TAG, "Next alarm should be an update at " + resetTime);
+
+
+                //set morning alarm for next day!
+                setAlarm(START_TIME, true);
             }
         }
 
@@ -123,23 +184,44 @@ public class CheckInService extends Service {
         return Service.START_NOT_STICKY;
     }
 
-    //the return type is long for testing. change to void for use
-    private long setAlarm(int timeArg, boolean startTime){
-        Log.v(LOG_TAG, "received alarm command for " + timeArg + " for a start command? " + startTime);
-        //for actual use, "time" will be an hour for the wakeup call
-        //for testing use, "time" is a number of seconds from now
 
+    private void setAlarm(int timeArg, boolean startTime){
 
          //      For actual use
         //current date and time
 
-        Calendar timeToWake = Calendar.getInstance();
-        //set the time to the next day for a start command
+//        Calendar timeToWake = Calendar.getInstance();
+//        timeToWake.setTimeInMillis(System.currentTimeMillis());
+        Calendar timeToWake = mTimeReport;
+        int hour = mTimeReport.get(Calendar.HOUR_OF_DAY);
+
+        //if we're setting the start alarm
         if (startTime) {
-            timeToWake.add(Calendar.DAY_OF_YEAR, 1);
+            //advance day if setting for next morning, don't if for same morning
+            if (hour >= END_TIME) {
+
+                //set the time to the next day for a start alarm
+                timeToWake.add(Calendar.DAY_OF_YEAR, 1);
+                timeToWake.set(Calendar.HOUR_OF_DAY, timeArg);
+                timeToWake.set(Calendar.MINUTE, 0);
+            }
+            //if we're starting before the start-alarm time
+            else if (hour < START_TIME) {
+                //set the alarm time to start_time
+                timeToWake.set(Calendar.HOUR_OF_DAY, timeArg);
+                timeToWake.set(Calendar.MINUTE, 0);
+            }
+            //otherwise we're between start and end alarm; this SHOULD NOT HAPPEN
+            else {
+                Toast.makeText(this, "Can't set start alarm between start and end", Toast.LENGTH_LONG).show();
+            }
         }
-        //set the time to start_time
-        timeToWake.set(Calendar.HOUR_OF_DAY, timeArg);
+        //otherwise we're setting the end alarm for same day
+        else {
+            timeToWake.set(Calendar.HOUR_OF_DAY, timeArg);
+            timeToWake.set(Calendar.MINUTE, 0);
+        }
+
 
 
         //get the millisecond value of the time to wake up
@@ -156,22 +238,19 @@ public class CheckInService extends Service {
             long wakeUpTimeMillis = timeToWake.getTimeInMillis();
 */
 
-            // set an alarm for the next morning and go to sleep
+            // set the requested alarm
             Intent intent1 = new Intent(getApplicationContext(), CheckInService.class);
             if (startTime) {
                 intent1.putExtra(Intent.EXTRA_TEXT, ALARM_WAKE_UP_START);
- //               Log.v(LOG_TAG, "Setting start alarm");
             }
             else  {
                 intent1.putExtra(Intent.EXTRA_TEXT, ALARM_WAKE_UP_END);
-  //              Log.v(LOG_TAG, "setting end alarm");
             }
             PendingIntent pendingIntent = PendingIntent.getService(this, 1, intent1, PendingIntent.FLAG_UPDATE_CURRENT);
- //       Log.v(LOG_TAG, "sending with command? " + intent1.getStringExtra(Intent.EXTRA_TEXT));
-            AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-            alarmManager.set(AlarmManager.RTC_WAKEUP, wakeUpTimeMillis , pendingIntent);
-//        Log.v(LOG_TAG, "Have set alarm");
-        return wakeUpTimeMillis;
+            AlarmManager mAlarmMgr = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+            mAlarmMgr.set(AlarmManager.RTC_WAKEUP, wakeUpTimeMillis, pendingIntent);
+        Log.v(LOG_TAG, "Setting first alarm for " + timeToWake.get(Calendar.HOUR_OF_DAY) + ": "
+                + timeToWake.get(Calendar.MINUTE) + " on day " + timeToWake.get(Calendar.DAY_OF_MONTH));
 
     }
 
@@ -187,24 +266,40 @@ public class CheckInService extends Service {
 
     private void sendStatusMessage(boolean hasUsed){
         String message;
-        if (hasUsed){
-            message = "Phone used at " + System.currentTimeMillis();
-        }
-        else {
-            message = "Phone not used by noon";
-        }
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+
+        Log.v(LOG_TAG, "I think the time of the alarm is " +
+                mTimeReport.get(Calendar.MONTH) + " " +  mTimeReport.get(Calendar.DAY_OF_MONTH)
+                        + " " + mTimeReport.get(Calendar.YEAR)
+                        + " " + mTimeReport.get(Calendar.HOUR_OF_DAY)
+                        + " " + mTimeReport.get(Calendar.MINUTE));
+
+        mContactNum = sharedPreferences.getString(getString(R.string.contact_num_key), "");
+
+        if (!mContactNum.isEmpty()) {
+
+            if (hasUsed) {
+                String timeUsed = sharedPreferences.getString(getString(R.string.last_used_time), "");
+                message = "Phone last used at " + timeUsed;
+            } else {
+                message = "Phone not used as of "
+                        + " " + END_TIME;
+            }
 
 //        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-    try {
-        //Eventually send SMS
-        SmsManager smsManager = SmsManager.getDefault();
-        //destination, sc
-        smsManager.sendTextMessage(CONTACT_PHONE_NUMBER, null, message, null, null);
-    }
-    catch (Exception e){
-        Toast.makeText(this, "Message not sent", Toast.LENGTH_LONG).show();
-        e.printStackTrace();
-    }
+            try {
+                //Eventually send SMS
+                SmsManager smsManager = SmsManager.getDefault();
+                //destination, sc
+                smsManager.sendTextMessage(mContactNum, null, message, null, null);
+            } catch (Exception e) {
+                Toast.makeText(this, "Message not sent", Toast.LENGTH_LONG).show();
+                e.printStackTrace();
+            }
+        }
+        else {
+            Toast.makeText(this, "No contact number supplied", Toast.LENGTH_LONG).show();
+        }
 
 
 

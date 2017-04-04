@@ -23,15 +23,10 @@ import static android.Manifest.permission.SEND_SMS;
 
 public class CheckInActivity extends AppCompatActivity implements View.OnClickListener{
 
-        private final static String CONTACT_PHONE_NUMBER = "6178998974";
-    private final static String SELF_PHONE_NUMBER = "5403151095";
 
-    //TESTING
-//    private final static String SELF_PHONE_NUMBER = "5556";
 
     private final static int CHECKIN_SMS_PERMISSION_REQUEST_CODE = 1;
 
-    private final static String ALARM_WAKE_UP = "AlarmWakeUp";
 
 
     private final static String LOG_TAG = CheckInActivity.class.getSimpleName();
@@ -45,12 +40,14 @@ public class CheckInActivity extends AppCompatActivity implements View.OnClickLi
         btn = (Button) findViewById(R.id.stop_service);
         btn.setOnClickListener(this);
 
+        /* This shouldn't happen, so ignore it.
 
         //if created by alarm, start self
         Intent intent = getIntent();
         if (intent.hasExtra(Intent.EXTRA_TEXT) && intent.getStringExtra(Intent.EXTRA_TEXT).equals(ALARM_WAKE_UP)){
             Log.v(LOG_TAG, "woken up by alarm");
         }
+        */
 
 
     }
@@ -109,7 +106,7 @@ public class CheckInActivity extends AppCompatActivity implements View.OnClickLi
                     CheckInService.class);
 
             Log.v(LOG_TAG, "starting service");
-            serviceIntent.putExtra(Intent.EXTRA_TEXT,"first_run");
+            serviceIntent.putExtra(Intent.EXTRA_TEXT, getString(R.string.first_run));
 
             startService(serviceIntent);
         }
