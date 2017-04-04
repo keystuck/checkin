@@ -40,14 +40,6 @@ public class CheckInActivity extends AppCompatActivity implements View.OnClickLi
         btn = (Button) findViewById(R.id.stop_service);
         btn.setOnClickListener(this);
 
-        /* This shouldn't happen, so ignore it.
-
-        //if created by alarm, start self
-        Intent intent = getIntent();
-        if (intent.hasExtra(Intent.EXTRA_TEXT) && intent.getStringExtra(Intent.EXTRA_TEXT).equals(ALARM_WAKE_UP)){
-            Log.v(LOG_TAG, "woken up by alarm");
-        }
-        */
 
 
     }

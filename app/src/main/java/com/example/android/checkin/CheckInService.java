@@ -63,14 +63,15 @@ public class CheckInService extends Service {
 
                 Toast.makeText(this, "Make sure to set contact phone number in settings!", Toast.LENGTH_LONG).show();
 
-                //TESTING: send a message as soon as installed to check time
+                // Get current time
                 mTimeReport = Calendar.getInstance();
                 mTimeReport.setTimeInMillis(System.currentTimeMillis());
+
+                //Make a string of "_:__" of time last used
                 String timeUsed = mTimeReport.get(Calendar.HOUR_OF_DAY) + ":" + mTimeReport.get(Calendar.MINUTE);
 
                 int hour = mTimeReport.get(Calendar.HOUR_OF_DAY);
 
-                Log.v(LOG_TAG, "first run and hour is " + hour);
 
                 //change "user-present" to true because installing it implies using device
                 SharedPreferences.Editor editor = sharedPreferences.edit();
@@ -81,14 +82,14 @@ public class CheckInService extends Service {
 
 
 
-                //If we are after end time or before start time
+                //If we are after end time or before start time, the next
+                //action should be wake-up-and-reset
                 if (hour >= END_TIME || hour < START_TIME){
 
                     String resetTime = START_TIME + ":00";
                     if (hour >= END_TIME){
                         resetTime = resetTime + " tomorrow";
                     }
-                    Log.v(LOG_TAG, "Next alarm should be a reset at " + resetTime);
 
                     //update the Preferences with the type and time of the next alarm
                     editor.putString(getString(R.string.next_type), getString(reset));
@@ -101,23 +102,20 @@ public class CheckInService extends Service {
                 //otherwise we're between times and should start with an end alarm
                 else if (hour >=  START_TIME){
 
+                    //next action should be update-contact-number
                     String updateTime = END_TIME + ":00";
-                    Log.v(LOG_TAG, "Next alarm should be an update at " + updateTime);
 
-                    //update Preferences with type andtime of next alarm
+                    //update Preferences with type and time of next alarm
                     editor.putString(getString(R.string.next_type), getString(R.string.update));
                     editor.putString(getString(R.string.next_time), updateTime);
                     editor.apply();
 
                     //set the alarm for the next end time
                     setAlarm(END_TIME, false);
-
                 }
-
-
             }
 
-            //if you've gotten the "first use" message
+            //if you've gotten the "first use of the day" message
             else if (intent.getStringExtra(Intent.EXTRA_TEXT).equals(getString(R.string.first_use_today))) {
                 SharedPreferences.Editor editor = sharedPreferences.edit();
 
@@ -134,7 +132,7 @@ public class CheckInService extends Service {
 
             }
 
-
+            //it's time for wake-up-and-reset
             else if (intent.getStringExtra(Intent.EXTRA_TEXT).equals(ALARM_WAKE_UP_START)) {
 
                 SharedPreferences.Editor editor = sharedPreferences.edit();
@@ -148,9 +146,6 @@ public class CheckInService extends Service {
                 editor.putString(getString(R.string.next_type), getString(R.string.update));
                 editor.putString(getString(R.string.next_time), updateTime);
                 editor.apply();
-
-                Log.v(LOG_TAG, "Next alarm should be an update at " + updateTime);
-
 
                 //set the alarm
                 setAlarm(END_TIME, false);
@@ -187,8 +182,7 @@ public class CheckInService extends Service {
 
     private void setAlarm(int timeArg, boolean startTime){
 
-         //      For actual use
-        //current date and time
+
 
 //        Calendar timeToWake = Calendar.getInstance();
 //        timeToWake.setTimeInMillis(System.currentTimeMillis());
@@ -205,7 +199,7 @@ public class CheckInService extends Service {
                 timeToWake.set(Calendar.HOUR_OF_DAY, timeArg);
                 timeToWake.set(Calendar.MINUTE, 0);
             }
-            //if we're starting before the start-alarm time
+            //if we're starting same day before the start-alarm time
             else if (hour < START_TIME) {
                 //set the alarm time to start_time
                 timeToWake.set(Calendar.HOUR_OF_DAY, timeArg);
@@ -226,17 +220,6 @@ public class CheckInService extends Service {
 
         //get the millisecond value of the time to wake up
         long wakeUpTimeMillis = timeToWake.getTimeInMillis();
-
-        /*
-            //for testing use
-            //current date and time
-            Calendar timeToWake = Calendar.getInstance();
-            //set the time to 6 AM (or, here, x seconds from now)
-            timeToWake.add(Calendar.SECOND, timeArg);
-            //get the millisecond value of the time to wake up
-
-            long wakeUpTimeMillis = timeToWake.getTimeInMillis();
-*/
 
             // set the requested alarm
             Intent intent1 = new Intent(getApplicationContext(), CheckInService.class);
@@ -265,7 +248,11 @@ public class CheckInService extends Service {
     }
 
     private void sendStatusMessage(boolean hasUsed){
+
+        //field to hold message to send to the contact
         String message;
+
+        //get preferences handle for getting details
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
 
         Log.v(LOG_TAG, "I think the time of the alarm is " +
@@ -274,6 +261,7 @@ public class CheckInService extends Service {
                         + " " + mTimeReport.get(Calendar.HOUR_OF_DAY)
                         + " " + mTimeReport.get(Calendar.MINUTE));
 
+        //get the number to which to send the alert -- if none, quit
         mContactNum = sharedPreferences.getString(getString(R.string.contact_num_key), "");
 
         if (!mContactNum.isEmpty()) {
@@ -283,20 +271,21 @@ public class CheckInService extends Service {
                 message = "Phone last used at " + timeUsed;
             } else {
                 message = "Phone not used as of "
-                        + " " + END_TIME;
+                        + " " + END_TIME + ":00";
             }
 
 //        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
             try {
-                //Eventually send SMS
+
                 SmsManager smsManager = SmsManager.getDefault();
-                //destination, sc
                 smsManager.sendTextMessage(mContactNum, null, message, null, null);
             } catch (Exception e) {
                 Toast.makeText(this, "Message not sent", Toast.LENGTH_LONG).show();
                 e.printStackTrace();
             }
         }
+        //no contact number -can't send
+        //TODO: make it so if the user enters a number, it tries again
         else {
             Toast.makeText(this, "No contact number supplied", Toast.LENGTH_LONG).show();
         }

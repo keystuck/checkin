@@ -23,30 +23,29 @@ public class ActionReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         //Access the settings to find out if this is the first time today the broadcast was received
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
+
+        //Has the user been present today?
         boolean usedToday = sharedPreferences.getBoolean("user_present_today", false);
         SharedPreferences.Editor editor = sharedPreferences.edit();
+
+        //get current time
         Calendar mTimeReport = Calendar.getInstance();
         mTimeReport.setTimeInMillis(System.currentTimeMillis());
         String timeUsed = mTimeReport.get(Calendar.HOUR_OF_DAY) + ":" + mTimeReport.get(Calendar.MINUTE);
+
+        //update preferences with current time (as time-last-used)
         editor.putString(context.getString(R.string.last_used_time), timeUsed);
         editor.apply();
 
 
-        //if so, start the service
+        //if this is the first use of the day, start the service
         if (!usedToday) {
-  //          String sb = "";
-  //          sb = sb + "Action: " + intent.getAction() + "\n";
-  //          sb = sb + "URI: " + intent.toUri(Intent.URI_INTENT_SCHEME) + "\n";
-  //          String log = sb;
- //           Log.d(LOG_TAG, log);
- //           Toast.makeText(context, log, Toast.LENGTH_LONG).show();
 
+            //start the service with "first-use-today" message
             Intent newServiceIntent = new Intent(context, CheckInService.class);
             newServiceIntent.putExtra(Intent.EXTRA_TEXT, context.getString(R.string.first_use_today));
             context.startService(newServiceIntent);
         }
 
-
-        //if not, do nothing
     }
 }
