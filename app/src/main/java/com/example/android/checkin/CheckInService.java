@@ -13,6 +13,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 import java.util.Calendar;
+import java.util.Locale;
 
 import static com.example.android.checkin.R.string.reset;
 
@@ -86,9 +87,16 @@ public class CheckInService extends Service {
                 //action should be wake-up-and-reset
                 if (hour >= END_TIME || hour < START_TIME){
 
-                    String resetTime = START_TIME + ":00";
+                    String resetTime = START_TIME + ":00 on ";
                     if (hour >= END_TIME){
-                        resetTime = resetTime + " tomorrow";
+                        resetTime +=
+                                mTimeReport.getDisplayName(Calendar.MONTH, Calendar.SHORT, Locale.US) +
+                                " " + (mTimeReport.get(Calendar.DAY_OF_MONTH) + 1);
+                    }
+                    else {
+                        resetTime +=
+                                mTimeReport.getDisplayName(Calendar.MONTH, Calendar.SHORT, Locale.US) +
+                                        " " + mTimeReport.get(Calendar.DAY_OF_MONTH);
                     }
 
                     //update the Preferences with the type and time of the next alarm
@@ -167,8 +175,6 @@ public class CheckInService extends Service {
                 editor.putString(getString(R.string.next_time), resetTime);
                 editor.apply();
 
-                Log.v(LOG_TAG, "Next alarm should be an update at " + resetTime);
-
 
                 //set morning alarm for next day!
                 setAlarm(START_TIME, true);
@@ -184,15 +190,22 @@ public class CheckInService extends Service {
 
 
 
-//        Calendar timeToWake = Calendar.getInstance();
-//        timeToWake.setTimeInMillis(System.currentTimeMillis());
+        mTimeReport = Calendar.getInstance();
+        mTimeReport.setTimeInMillis(System.currentTimeMillis());
         Calendar timeToWake = mTimeReport;
         int hour = mTimeReport.get(Calendar.HOUR_OF_DAY);
+
+        Log.v(LOG_TAG, "I think the current time is " +
+                mTimeReport.get(Calendar.MONTH) + " " +  mTimeReport.get(Calendar.DAY_OF_MONTH)
+                + " " + mTimeReport.get(Calendar.YEAR)
+                + " " + mTimeReport.get(Calendar.HOUR_OF_DAY)
+                + " " + mTimeReport.get(Calendar.MINUTE));
+
 
         //if we're setting the start alarm
         if (startTime) {
             //advance day if setting for next morning, don't if for same morning
-            if (hour >= END_TIME) {
+            if (hour >= START_TIME) {
 
                 //set the time to the next day for a start alarm
                 timeToWake.add(Calendar.DAY_OF_YEAR, 1);
@@ -200,14 +213,10 @@ public class CheckInService extends Service {
                 timeToWake.set(Calendar.MINUTE, 0);
             }
             //if we're starting same day before the start-alarm time
-            else if (hour < START_TIME) {
+            else {
                 //set the alarm time to start_time
                 timeToWake.set(Calendar.HOUR_OF_DAY, timeArg);
                 timeToWake.set(Calendar.MINUTE, 0);
-            }
-            //otherwise we're between start and end alarm; this SHOULD NOT HAPPEN
-            else {
-                Toast.makeText(this, "Can't set start alarm between start and end", Toast.LENGTH_LONG).show();
             }
         }
         //otherwise we're setting the end alarm for same day
