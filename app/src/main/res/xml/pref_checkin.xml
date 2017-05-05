@@ -8,28 +8,35 @@
         android:summaryOn="Used Today"
         android:title="User Present Today" />
 
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="@string/send_email_check"
+        android:summaryOff="Don't send email"
+        android:summaryOn="Send update as email"
+        android:title="@string/send_email"
+        android:visibility="gone"/>
+
     <EditTextPreference
         android:key="time_used"
+        android:editable="false"
         android:title="Phone Last Used At"
         android:summary="phone last used time"
         android:defaultValue=""
         />
 
-    <EditTextPreference
-        android:defaultValue=""
-        android:key="@string/next_type"
-        android:summary="next alarm type"
-        android:title="Next alarm will be: "/>
 
     <EditTextPreference
         android:defaultValue=""
+        android:editable="false"
         android:key="@string/next_time"
-        android:summary="Next alarm time"
-        android:title="Next alarm at: "/>
+        android:summary="Next message time"
+        android:title="Next message at: "/>
 
     <EditTextPreference
         android:defaultValue=""
         android:key="@string/contact_num_key"
         android:summary="@string/contact_phone"
         android:title="Contact Phone Number: "/>
+
+
 </PreferenceScreen>

@@ -7,6 +7,7 @@ import android.support.v7.preference.EditTextPreference;
 import android.support.v7.preference.Preference;
 import android.support.v7.preference.PreferenceFragmentCompat;
 import android.support.v7.preference.PreferenceScreen;
+import android.widget.Toast;
 
 /**
  * Created by emilystuckey on 3/7/17.
@@ -52,7 +53,12 @@ public class SettingsFragment extends PreferenceFragmentCompat implements
             //update summary
             if (!(preference instanceof CheckBoxPreference)){
                 String value = sharedPreferences.getString(preference.getKey(), "");
-                setPreferenceSummary(preference, value);
+                if (preference.getKey().equals(getString(R.string.contact_num_key))) {
+                    setPreferenceSummary(preference, value);
+                }
+                else {
+                    Toast.makeText(getContext(), "This value cannot be changed by the user at this time", Toast.LENGTH_SHORT).show();
+                }
             }
         }
     }

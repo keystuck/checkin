@@ -8,6 +8,7 @@
     <string name="reset">Reset Alarm</string>
     <string name="update">Update Alarm</string>
     <string name="contact_phone">Number to which to send update texts</string>
+    <string name="send_email">Send update as e-mail?</string>
 
     <string name="user_present_today">user_present_today</string>
     <string name="first_use_today">first_use_of_day</string>
@@ -16,5 +17,7 @@
     <string name="next_type">next_alarm_type</string>
     <string name="next_time">next_alarm_time</string>
     <string name="contact_num_key">contact_phone</string>
+    <string name="send_email_check">send_email</string>
+    <string name="last_used_key">last_used_date_object</string>
 
 </resources>
