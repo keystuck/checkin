@@ -14,7 +14,7 @@ import android.widget.Toast;
 
 import java.util.Calendar;
 import java.util.Locale;
-
+import com.example.android.checkin.R;
 import static com.example.android.checkin.R.string.reset;
 
 public class CheckInService extends Service {
@@ -270,20 +270,26 @@ public class CheckInService extends Service {
                         + " " + mTimeReport.get(Calendar.HOUR_OF_DAY)
                         + " " + mTimeReport.get(Calendar.MINUTE));
 
+        if (hasUsed) {
+            String timeUsed = sharedPreferences.getString(getString(R.string.last_used_time), "");
+            message = "Phone last used at " + timeUsed;
+        } else {
+            message = "Phone not used as of "
+                    + " " + END_TIME + ":00";
+        }
+
+        //Test device can't sent SMS, so using Toast. Normally, comment Toast & use next block
+
+//        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+
         //get the number to which to send the alert -- if none, quit
         mContactNum = sharedPreferences.getString(getString(R.string.contact_num_key), "");
 
         if (!mContactNum.isEmpty()) {
 
-            if (hasUsed) {
-                String timeUsed = sharedPreferences.getString(getString(R.string.last_used_time), "");
-                message = "Phone last used at " + timeUsed;
-            } else {
-                message = "Phone not used as of "
-                        + " " + END_TIME + ":00";
-            }
 
-//        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+
+
             try {
 
                 SmsManager smsManager = SmsManager.getDefault();
@@ -293,11 +299,13 @@ public class CheckInService extends Service {
                 e.printStackTrace();
             }
         }
+
         //no contact number -can't send
         //TODO: make it so if the user enters a number, it tries again
         else {
             Toast.makeText(this, "No contact number supplied", Toast.LENGTH_LONG).show();
         }
+
 
 
 
