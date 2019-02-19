@@ -33,6 +33,11 @@ public class ActionReceiver extends BroadcastReceiver {
         mTimeReport.setTimeInMillis(System.currentTimeMillis());
         String timeUsed = mTimeReport.get(Calendar.HOUR_OF_DAY) + ":" + mTimeReport.get(Calendar.MINUTE);
 
+        //TODO: THIS IS TESTING RELATED
+        String detailedTime = mTimeReport.get(Calendar.MONTH + 1) + "-" + mTimeReport.get(Calendar.DAY_OF_MONTH)
+                + ", " + timeUsed;
+        editor.putString("ACTIVATION_TIME", detailedTime);
+
         //update preferences with current time (as time-last-used)
         editor.putString(context.getString(R.string.last_used_time), timeUsed);
         editor.apply();

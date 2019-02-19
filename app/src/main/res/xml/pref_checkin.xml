@@ -32,4 +32,10 @@
         android:key="@string/contact_num_key"
         android:summary="@string/contact_phone"
         android:title="Contact Phone Number: "/>
+
+    <EditTextPreference
+        android:defaultValue=""
+        android:key="ACTIVATION_TIME"
+        android:summary="receiver or service most recently used at"
+        android:title="TESTING INFO" />
 </PreferenceScreen>

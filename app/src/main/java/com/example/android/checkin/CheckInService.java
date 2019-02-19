@@ -20,17 +20,14 @@ import static com.example.android.checkin.R.string.reset;
 public class CheckInService extends Service {
 
     //number to which to send noon update
-//    private final static String CONTACT_PHONE_NUMBER = "6178998974";
+
     private String mContactNum;
 
 
     private final static String ALARM_WAKE_UP_START = "AlarmWakeUpStart";
     private final static String ALARM_WAKE_UP_END = "AlarmWakeUpEnd";
 
-
-
-
-    //TESTING
+    //TODO: TESTING
     private int START_TIME = 6;
     private int END_TIME = 12;
 
@@ -68,7 +65,7 @@ public class CheckInService extends Service {
                 mTimeReport = Calendar.getInstance();
                 mTimeReport.setTimeInMillis(System.currentTimeMillis());
 
-                //Make a string of "_:__" of time last used
+                //Make a string of "_:__" of current time (time last used)
                 String timeUsed = mTimeReport.get(Calendar.HOUR_OF_DAY) + ":" + mTimeReport.get(Calendar.MINUTE);
 
                 int hour = mTimeReport.get(Calendar.HOUR_OF_DAY);
@@ -80,6 +77,11 @@ public class CheckInService extends Service {
 
                 //put current time in "last-time-used" field
                 editor.putString(getString(R.string.last_used_time), timeUsed);
+
+                //TODO: THIS IS TESTING RELATED
+                String detailedTime = mTimeReport.get(Calendar.MONTH + 1) + "-" + mTimeReport.get(Calendar.DAY_OF_MONTH)
+                        + ", " + timeUsed;
+                editor.putString("ACTIVATION_TIME", detailedTime);
 
 
 
@@ -111,11 +113,13 @@ public class CheckInService extends Service {
                 else if (hour >=  START_TIME){
 
                     //next action should be update-contact-number
+                    //TODO: what does that comment mean???
                     String updateTime = END_TIME + ":00";
 
                     //update Preferences with type and time of next alarm
                     editor.putString(getString(R.string.next_type), getString(R.string.update));
                     editor.putString(getString(R.string.next_time), updateTime);
+
                     editor.apply();
 
                     //set the alarm for the next end time
@@ -134,6 +138,12 @@ public class CheckInService extends Service {
                 mTimeReport = Calendar.getInstance();
                 mTimeReport.setTimeInMillis(System.currentTimeMillis());
                 String timeUsed = mTimeReport.get(Calendar.HOUR_OF_DAY) + ":" + mTimeReport.get(Calendar.MINUTE);
+
+                //TODO: THIS IS TESTING RELATED
+                String detailedTime = mTimeReport.get(Calendar.MONTH + 1) + "-" + mTimeReport.get(Calendar.DAY_OF_MONTH)
+                        + ", " + timeUsed;
+                editor.putString("ACTIVATION_TIME", detailedTime);
+
                 editor.putString(getString(R.string.last_used_time), timeUsed);
                 editor.apply();
 
@@ -149,6 +159,14 @@ public class CheckInService extends Service {
                 editor.putBoolean(getString(R.string.user_present_today), false);
                 editor.putString(getString(R.string.last_used_time), "");
                 String updateTime = END_TIME + ":00";
+
+                //TODO: THIS IS TESTING RELATED
+                mTimeReport = Calendar.getInstance();
+                mTimeReport.setTimeInMillis(System.currentTimeMillis());
+                String timeUsed = mTimeReport.get(Calendar.HOUR_OF_DAY) + ":" + mTimeReport.get(Calendar.MINUTE);
+                String detailedTime = mTimeReport.get(Calendar.MONTH + 1) + "-" + mTimeReport.get(Calendar.DAY_OF_MONTH)
+                        + ", " + timeUsed;
+                editor.putString("ACTIVATION_TIME", detailedTime);
 
                 //update with next type and time of alarm
                 editor.putString(getString(R.string.next_type), getString(R.string.update));
@@ -171,6 +189,15 @@ public class CheckInService extends Service {
                 //update the preferences with type and time of next alarm
                 String resetTime = START_TIME + ":00";
                 SharedPreferences.Editor editor = sharedPreferences.edit();
+
+                //TODO: THIS IS TESTING RELATED
+                mTimeReport = Calendar.getInstance();
+                mTimeReport.setTimeInMillis(System.currentTimeMillis());
+                String timeUsed = mTimeReport.get(Calendar.HOUR_OF_DAY) + ":" + mTimeReport.get(Calendar.MINUTE);
+                String detailedTime = mTimeReport.get(Calendar.MONTH + 1) + "-" + mTimeReport.get(Calendar.DAY_OF_MONTH)
+                        + ", " + timeUsed;
+                editor.putString("ACTIVATION_TIME", detailedTime);
+
                 editor.putString(getString(R.string.next_type), getString(reset));
                 editor.putString(getString(R.string.next_time), resetTime);
                 editor.apply();
