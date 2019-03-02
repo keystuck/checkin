@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.IBinder;
+import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.telephony.SmsManager;
 import android.util.Log;
@@ -66,7 +67,11 @@ public class CheckInService extends Service {
                 mTimeReport.setTimeInMillis(System.currentTimeMillis());
 
                 //Make a string of "_:__" of current time (time last used)
-                String timeUsed = mTimeReport.get(Calendar.HOUR_OF_DAY) + ":" + mTimeReport.get(Calendar.MINUTE);
+                String timeUsed = mTimeReport.get(Calendar.HOUR_OF_DAY) + ":";
+                if (mTimeReport.get(Calendar.MINUTE) < 10){
+                    timeUsed += "0";
+                }
+                timeUsed += mTimeReport.get(Calendar.MINUTE);
 
                 int hour = mTimeReport.get(Calendar.HOUR_OF_DAY);
 
@@ -75,15 +80,25 @@ public class CheckInService extends Service {
                 SharedPreferences.Editor editor = sharedPreferences.edit();
                 editor.putBoolean(getString(R.string.user_present_today), true);
 
+                //TESTING related
+                editor. putString("ACTIVATION_TIME", "before first send");
+
+
                 //put current time in "last-time-used" field
                 editor.putString(getString(R.string.last_used_time), timeUsed);
 
-                //TODO: THIS IS TESTING RELATED
-                String detailedTime = mTimeReport.get(Calendar.MONTH + 1) + "-" + mTimeReport.get(Calendar.DAY_OF_MONTH)
-                        + ", " + timeUsed;
-                editor.putString("ACTIVATION_TIME", detailedTime);
 
+                String updateTime = END_TIME + ":00";
 
+                //update Preferences with type and time of next alarm
+                editor.putString(getString(R.string.next_type), getString(R.string.update));
+                editor.putString(getString(R.string.next_time), updateTime);
+
+                editor.apply();
+
+                //set the alarm for the next end time
+                setAlarm(END_TIME, false);
+                Log.d(LOG_TAG, "setting end alarm for " + END_TIME);
 
                 //If we are after end time or before start time, the next
                 //action should be wake-up-and-reset
@@ -109,8 +124,12 @@ public class CheckInService extends Service {
                     //set the alarm for tomorrow's start time
                     setAlarm(START_TIME, true);
                 }
+/*
+                //deleting this block as the end alarm should be set no matter what
                 //otherwise we're between times and should start with an end alarm
+
                 else if (hour >=  START_TIME){
+
 
                     //next action should be update-contact-number
                     //TODO: what does that comment mean???
@@ -124,7 +143,9 @@ public class CheckInService extends Service {
 
                     //set the alarm for the next end time
                     setAlarm(END_TIME, false);
+                    Log.d(LOG_TAG, "setting end alarm for " + END_TIME);
                 }
+                */
             }
 
             //if you've gotten the "first use of the day" message
@@ -139,10 +160,7 @@ public class CheckInService extends Service {
                 mTimeReport.setTimeInMillis(System.currentTimeMillis());
                 String timeUsed = mTimeReport.get(Calendar.HOUR_OF_DAY) + ":" + mTimeReport.get(Calendar.MINUTE);
 
-                //TODO: THIS IS TESTING RELATED
-                String detailedTime = mTimeReport.get(Calendar.MONTH + 1) + "-" + mTimeReport.get(Calendar.DAY_OF_MONTH)
-                        + ", " + timeUsed;
-                editor.putString("ACTIVATION_TIME", detailedTime);
+
 
                 editor.putString(getString(R.string.last_used_time), timeUsed);
                 editor.apply();
@@ -160,25 +178,22 @@ public class CheckInService extends Service {
                 editor.putString(getString(R.string.last_used_time), "");
                 String updateTime = END_TIME + ":00";
 
-                //TODO: THIS IS TESTING RELATED
-                mTimeReport = Calendar.getInstance();
-                mTimeReport.setTimeInMillis(System.currentTimeMillis());
-                String timeUsed = mTimeReport.get(Calendar.HOUR_OF_DAY) + ":" + mTimeReport.get(Calendar.MINUTE);
-                String detailedTime = mTimeReport.get(Calendar.MONTH + 1) + "-" + mTimeReport.get(Calendar.DAY_OF_MONTH)
-                        + ", " + timeUsed;
-                editor.putString("ACTIVATION_TIME", detailedTime);
+
 
                 //update with next type and time of alarm
                 editor.putString(getString(R.string.next_type), getString(R.string.update));
                 editor.putString(getString(R.string.next_time), updateTime);
                 editor.apply();
 
-                //set the alarm
-                setAlarm(END_TIME, false);
+                //set the alarm -- delete because shouldn't need resetting
+//                setAlarm(END_TIME, false);
             }
 
             else if (intent.getStringExtra(Intent.EXTRA_TEXT).equals(ALARM_WAKE_UP_END)) {
+                Log.d(LOG_TAG, "end alarm going off");
                 boolean used_today = sharedPreferences.getBoolean(getString(R.string.user_present_today), false);
+                mTimeReport = Calendar.getInstance();
+                mTimeReport.setTimeInMillis(System.currentTimeMillis());
                 if (!used_today) {
                     //user hasn't used phone today, send message
                     sendStatusMessage(false);
@@ -215,7 +230,7 @@ public class CheckInService extends Service {
 
     private void setAlarm(int timeArg, boolean startTime){
 
-
+        //TODO: maybe start alarm should repeat as well?
 
         mTimeReport = Calendar.getInstance();
         mTimeReport.setTimeInMillis(System.currentTimeMillis());
@@ -246,10 +261,17 @@ public class CheckInService extends Service {
                 timeToWake.set(Calendar.MINUTE, 0);
             }
         }
-        //otherwise we're setting the end alarm for same day
+        //
+        //otherwise we're setting the end alarm
         else {
-            timeToWake.set(Calendar.HOUR_OF_DAY, timeArg);
-            timeToWake.set(Calendar.MINUTE, 0);
+            if (hour < END_TIME) {
+                timeToWake.set(Calendar.HOUR_OF_DAY, timeArg);
+                timeToWake.set(Calendar.MINUTE, 0);
+            } else {
+                timeToWake.add(Calendar.DAY_OF_YEAR, 1);
+                timeToWake.set(Calendar.HOUR_OF_DAY, timeArg);
+                timeToWake.set(Calendar.MINUTE, 0);
+            }
         }
 
 
@@ -265,11 +287,23 @@ public class CheckInService extends Service {
             else  {
                 intent1.putExtra(Intent.EXTRA_TEXT, ALARM_WAKE_UP_END);
             }
-            PendingIntent pendingIntent = PendingIntent.getService(this, 1, intent1, PendingIntent.FLAG_UPDATE_CURRENT);
-            AlarmManager mAlarmMgr = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-            mAlarmMgr.set(AlarmManager.RTC_WAKEUP, wakeUpTimeMillis, pendingIntent);
-        Log.v(LOG_TAG, "Setting first alarm for " + timeToWake.get(Calendar.HOUR_OF_DAY) + ": "
-                + timeToWake.get(Calendar.MINUTE) + " on day " + timeToWake.get(Calendar.DAY_OF_MONTH));
+            if (startTime) {
+                PendingIntent pendingIntent = PendingIntent.getService(this, 1, intent1, PendingIntent.FLAG_UPDATE_CURRENT);
+                AlarmManager mAlarmMgr = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+                mAlarmMgr.set(AlarmManager.RTC_WAKEUP, wakeUpTimeMillis, pendingIntent);
+                Log.v(LOG_TAG, "Setting first alarm for " + timeToWake.get(Calendar.HOUR_OF_DAY) + ": "
+                        + timeToWake.get(Calendar.MINUTE) + " on day " + timeToWake.get(Calendar.DAY_OF_MONTH));
+            } else {
+                //only different because end alarm should be repeating
+                PendingIntent pendingIntent = PendingIntent.getService(this, 2, intent1, PendingIntent.FLAG_UPDATE_CURRENT);
+                AlarmManager mAlarmMgr = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+                mAlarmMgr.setInexactRepeating(AlarmManager.RTC_WAKEUP,
+                        wakeUpTimeMillis,
+                        SystemClock.elapsedRealtime() + AlarmManager.INTERVAL_DAY,
+                        pendingIntent);
+                Log.v(LOG_TAG, "Setting repeating alarm for " + timeToWake.get(Calendar.HOUR_OF_DAY) + ": "
+                        + timeToWake.get(Calendar.MINUTE) + " every day");
+            }
 
     }
 
